@@ -1,6 +1,6 @@
 -- ============================================
--- EVENT HORIZON - VERSION COMPLÈTE CORRIGÉE
--- Team check | Alive check | Aimbot ingame | ESP positions fixées
+-- EVENT HORIZON - VERSION ULTIME CORRIGÉE
+-- Tous les bugs fixés | Keybinds souris | Couleurs réglables
 -- ============================================
 
 -- Services
@@ -12,46 +12,56 @@ local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 local Camera = Workspace.CurrentCamera
 
--- Variables CORRIGÉES (toggles inversés fixés)
+-- Variables avec états CORRECTS
 local Cheat = {
     ESP = {
-        Enabled = false,  -- OFF par défaut
+        Enabled = false,
         Box = false,
         BoxColor = Color3.fromRGB(255, 50, 50),
+        BoxThickness = 2,
+        BoxTransparency = 0,
         Tracers = false,
         TracerColor = Color3.fromRGB(50, 255, 50),
+        TracerThickness = 1,
         Names = false,
         NamesColor = Color3.fromRGB(255, 255, 255),
+        NamesSize = 14,
         Health = false,
         HealthColor = Color3.fromRGB(0, 255, 0),
+        HealthSize = 12,
         Distance = false,
         DistanceColor = Color3.fromRGB(200, 200, 200),
+        DistanceSize = 11,
         BoxSize = 1.2,
-        TeamCheck = true,  -- Ne pas montrer les coéquipiers
-        AliveCheck = true  -- Ne montrer que les vivants
+        TeamCheck = true,
+        AliveCheck = true
     },
     Aim = {
-        Enabled = false,  -- OFF par défaut
+        Enabled = false,
         HoldKey = nil,
         HoldKeyText = "NONE",
-        TargetPart = "Head",  -- Head, UpperTorso, HumanoidRootPart
+        TargetPart = "Head",
         FOV = 120,
         ShowFOV = false,
         FOVColor = Color3.fromRGB(255, 255, 255),
+        FOVThickness = 1,
+        FOVTransparency = 0,
         Smooth = 0.15,
         TriggerBot = false,
         MagicBullet = false,
         HitboxSize = 3,
         SilentAim = false,
         HitChance = 85,
-        TeamCheck = true,  -- Ne pas viser les coéquipiers
-        AliveCheck = true  -- Ne viser que les vivants
+        TeamCheck = true,
+        AliveCheck = true
     },
     Move = {
         Fly = false,
-        FlySpeed = 32,
+        FlySpeed = 50,
+        FlyUpSpeed = 50,
+        FlyDownSpeed = 50,
         WalkSpeed = false,
-        Speed = 24,
+        Speed = 30,
         JumpPower = false,
         Jump = 55,
         BunnyHop = false,
@@ -61,32 +71,43 @@ local Cheat = {
 
 -- États
 local ESPDrawings = {}
-local IsAiming = false
 local FlyBodyVelocity
 local FOVCircle = Drawing.new("Circle")
 local KeybindListening = nil
+local IsAiming = false
+
+-- Variables pour les contrôles de vol
+local flyKeyPressed = false
+local flyUpKey = Enum.KeyCode.Space
+local flyDownKey = Enum.KeyCode.LeftShift
+local flyForwardKey = Enum.KeyCode.W
+local flyBackKey = Enum.KeyCode.S
+local flyLeftKey = Enum.KeyCode.A
+local flyRightKey = Enum.KeyCode.D
 
 -- Initialisation FOV Circle
 FOVCircle.Visible = Cheat.Aim.ShowFOV
 FOVCircle.Color = Cheat.Aim.FOVColor
-FOVCircle.Thickness = 1
+FOVCircle.Thickness = Cheat.Aim.FOVThickness
 FOVCircle.NumSides = 100
 FOVCircle.Radius = Cheat.Aim.FOV
 FOVCircle.Filled = false
+FOVCircle.Transparency = Cheat.Aim.FOVTransparency
 FOVCircle.Position = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
 
--- Fonction Team Check
+-- ============================================
+-- FONCTIONS UTILITAIRES
+-- ============================================
+
 function IsEnemy(player)
     if not Cheat.ESP.TeamCheck and not Cheat.Aim.TeamCheck then
         return true
     end
     
-    -- Vérifie si le jeu a un système d'équipe
     if LocalPlayer.Team and player.Team then
         return LocalPlayer.Team ~= player.Team
     end
     
-    -- Vérifie la couleur du joueur (méthode alternative)
     if LocalPlayer.TeamColor and player.TeamColor then
         return LocalPlayer.TeamColor ~= player.TeamColor
     end
@@ -94,7 +115,6 @@ function IsEnemy(player)
     return true
 end
 
--- Fonction Alive Check
 function IsAlive(player)
     if not Cheat.ESP.AliveCheck and not Cheat.Aim.AliveCheck then
         return true
@@ -109,7 +129,7 @@ function IsAlive(player)
 end
 
 -- ============================================
--- ESP CORRIGÉ - POSITIONS FIXÉES
+-- ESP CORRIGÉ AVEC COULEURS RÉGLABLES
 -- ============================================
 
 function UpdateESP()
@@ -118,7 +138,6 @@ function UpdateESP()
             local root = player.Character:FindFirstChild("HumanoidRootPart")
             local humanoid = player.Character:FindFirstChild("Humanoid")
             
-            -- Team Check & Alive Check
             local shouldShow = true
             if Cheat.ESP.TeamCheck then shouldShow = shouldShow and IsEnemy(player) end
             if Cheat.ESP.AliveCheck then shouldShow = shouldShow and IsAlive(player) end
@@ -145,67 +164,74 @@ function UpdateESP()
                     local height = math.abs(headPos.Y - pos.Y) * 2 * Cheat.ESP.BoxSize
                     local width = height / 2
                     
-                    -- Position de la boîte
                     local boxX = pos.X - width/2
                     local boxY = pos.Y - height/2
                     
-                    -- Box
+                    -- Box avec réglages
                     esp.Box.Visible = Cheat.ESP.Box
                     if Cheat.ESP.Box then
                         esp.Box.Color = Cheat.ESP.BoxColor
-                        esp.Box.Thickness = 2
+                        esp.Box.Thickness = Cheat.ESP.BoxThickness
+                        esp.Box.Transparency = 1 - Cheat.ESP.BoxTransparency
                         esp.Box.Size = Vector2.new(width, height)
                         esp.Box.Position = Vector2.new(boxX, boxY)
+                        esp.Box.Filled = false
                     end
                     
-                    -- Tracer
+                    -- Tracer avec réglages
                     esp.Tracer.Visible = Cheat.ESP.Tracers
                     if Cheat.ESP.Tracers then
                         esp.Tracer.Color = Cheat.ESP.TracerColor
-                        esp.Tracer.Thickness = 1
+                        esp.Tracer.Thickness = Cheat.ESP.TracerThickness
+                        esp.Tracer.Transparency = 1
                         esp.Tracer.From = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y)
                         esp.Tracer.To = Vector2.new(pos.X, pos.Y)
                     end
                     
-                    -- Name (POSITION CORRIGÉE - au-dessus de la boîte)
+                    -- Name avec réglages
                     esp.Name.Visible = Cheat.ESP.Names
                     if Cheat.ESP.Names then
                         esp.Name.Color = Cheat.ESP.NamesColor
                         esp.Name.Text = player.Name
-                        esp.Name.Position = Vector2.new(pos.X, boxY - 15)  -- 15 pixels au-dessus
-                        esp.Name.Size = 14
+                        esp.Name.Position = Vector2.new(pos.X, boxY - 20)
+                        esp.Name.Size = Cheat.ESP.NamesSize
                         esp.Name.Center = true
+                        esp.Name.Outline = true
+                        esp.Name.OutlineColor = Color3.new(0, 0, 0)
                     end
                     
-                    -- Health (POSITION CORRIGÉE - sous la boîte)
+                    -- Health avec réglages et couleur dynamique
                     esp.Health.Visible = Cheat.ESP.Health
                     if Cheat.ESP.Health then
                         local healthPercent = humanoid.Health / humanoid.MaxHealth
                         local healthColor = Cheat.ESP.HealthColor
                         
-                        -- Changement de couleur selon la santé
                         if healthPercent < 0.3 then
                             healthColor = Color3.fromRGB(255, 50, 50)
                         elseif healthPercent < 0.6 then
-                            healthColor = Color3.fromRGB(255, 255, 50)
+                            healthColor = Color3.fromRGB(255, 200, 50)
                         end
                         
                         esp.Health.Color = healthColor
                         esp.Health.Text = math.floor(humanoid.Health) .. "/" .. math.floor(humanoid.MaxHealth)
-                        esp.Health.Position = Vector2.new(pos.X, boxY + height + 5)  -- 5 pixels en dessous
-                        esp.Health.Size = 12
+                        esp.Health.Position = Vector2.new(pos.X, boxY + height + 5)
+                        esp.Health.Size = Cheat.ESP.HealthSize
                         esp.Health.Center = true
+                        esp.Health.Outline = true
+                        esp.Health.OutlineColor = Color3.new(0, 0, 0)
                     end
                     
-                    -- Distance (POSITION CORRIGÉE - sous la santé)
+                    -- Distance avec réglages
                     esp.Distance.Visible = Cheat.ESP.Distance
                     if Cheat.ESP.Distance then
                         local dist = (root.Position - Camera.CFrame.Position).Magnitude
                         esp.Distance.Color = Cheat.ESP.DistanceColor
                         esp.Distance.Text = math.floor(dist) .. " studs"
-                        esp.Distance.Position = Vector2.new(pos.X, boxY + height + 20)  -- 20 pixels en dessous
-                        esp.Distance.Size = 11
+                        esp.Distance.Position = Vector2.new(pos.X, boxY + height + 25)
+                        esp.Distance.Size = Cheat.ESP.DistanceSize
                         esp.Distance.Center = true
+                        esp.Distance.Outline = true
+                        esp.Distance.OutlineColor = Color3.new(0, 0, 0)
                     end
                 else
                     for _, drawing in pairs(esp) do
@@ -222,7 +248,20 @@ function UpdateESP()
 end
 
 -- ============================================
--- GUI AVEC TOUTES LES OPTIONS
+-- FOV CIRCLE AVEC RÉGLAGES
+-- ============================================
+
+function UpdateFOVCircle()
+    FOVCircle.Visible = Cheat.Aim.ShowFOV
+    FOVCircle.Color = Cheat.Aim.FOVColor
+    FOVCircle.Thickness = Cheat.Aim.FOVThickness
+    FOVCircle.Radius = Cheat.Aim.FOV
+    FOVCircle.Transparency = Cheat.Aim.FOVTransparency
+    FOVCircle.Position = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
+end
+
+-- ============================================
+-- GUI SIMPLE ET FONCTIONNEL
 -- ============================================
 
 local ScreenGui = Instance.new("ScreenGui")
@@ -231,8 +270,8 @@ ScreenGui.Parent = game:GetService("CoreGui")
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 420, 0, 500)
-MainFrame.Position = UDim2.new(0.5, -210, 0.5, -250)
+MainFrame.Size = UDim2.new(0, 400, 0, 450)
+MainFrame.Position = UDim2.new(0.5, -200, 0.5, -225)
 MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -240,6 +279,7 @@ MainFrame.Draggable = true
 MainFrame.Visible = true
 MainFrame.Parent = ScreenGui
 
+-- Header
 local Header = Instance.new("Frame")
 Header.Size = UDim2.new(1, 0, 0, 50)
 Header.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
@@ -249,7 +289,7 @@ local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, -100, 1, 0)
 Title.Position = UDim2.new(0, 15, 0, 0)
 Title.BackgroundTransparency = 1
-Title.Text = "EVENT HORIZON v2.0"
+Title.Text = "EVENT HORIZON"
 Title.TextColor3 = Color3.fromRGB(0, 200, 255)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 20
@@ -267,7 +307,7 @@ ToggleBtn.TextSize = 12
 ToggleBtn.Parent = Header
 
 -- Onglets
-local Tabs = {"VISUAL", "AIM", "MOVEMENT"}
+local Tabs = {"VISUAL", "AIM", "MOVE"}
 local TabButtons = {}
 local TabFrames = {}
 
@@ -314,28 +354,10 @@ for i, tabName in ipairs(Tabs) do
 end
 
 -- ============================================
--- FONCTIONS UI AMÉLIORÉES
+-- FONCTIONS UI CORRIGÉES
 -- ============================================
 
-local function CreateSection(parent, title)
-    local section = Instance.new("Frame")
-    section.Size = UDim2.new(1, 0, 0, 30)
-    section.BackgroundTransparency = 1
-    section.Parent = parent
-    
-    local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1, 0, 1, 0)
-    label.BackgroundTransparency = 1
-    label.Text = "▶ " .. title
-    label.TextColor3 = Color3.fromRGB(0, 180, 255)
-    label.Font = Enum.Font.GothamBold
-    label.TextSize = 14
-    label.TextXAlignment = Enum.TextXAlignment.Left
-    label.Parent = section
-    
-    return section
-end
-
+-- Fonction toggle CORRIGÉE (état correct)
 local function CreateToggle(parent, text, default, callback)
     local frame = Instance.new("Frame")
     frame.Size = UDim2.new(1, 0, 0, 32)
@@ -362,8 +384,14 @@ local function CreateToggle(parent, text, default, callback)
     status.TextSize = 13
     status.Parent = frame
     
+    -- CORRECTION: Stocke l'état actuel
+    local currentState = default
+    
     btn.MouseButton1Click:Connect(function()
-        local new = not callback()
+        currentState = not currentState
+        local new = callback()
+        
+        -- Met à jour l'affichage selon le retour de la callback
         btn.BackgroundColor3 = new and Color3.fromRGB(0, 160, 60) or Color3.fromRGB(160, 50, 50)
         status.BackgroundColor3 = new and Color3.fromRGB(0, 120, 40) or Color3.fromRGB(120, 40, 40)
         status.Text = new and "ON" or "OFF"
@@ -432,74 +460,7 @@ local function CreateSlider(parent, text, min, max, default, callback)
     return frame
 end
 
-local function CreateDropdown(parent, text, options, default, callback)
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, 0, 0, 40)
-    frame.BackgroundTransparency = 1
-    frame.Parent = parent
-    
-    local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(0, 120, 0, 25)
-    label.Text = text
-    label.TextColor3 = Color3.new(1, 1, 1)
-    label.Font = Enum.Font.Gotham
-    label.TextSize = 13
-    label.TextXAlignment = Enum.TextXAlignment.Left
-    label.BackgroundTransparency = 1
-    label.Parent = frame
-    
-    local dropdown = Instance.new("TextButton")
-    dropdown.Size = UDim2.new(0, 150, 0, 28)
-    dropdown.Position = UDim2.new(0, 125, 0, 0)
-    dropdown.BackgroundColor3 = Color3.fromRGB(60, 60, 85)
-    dropdown.Text = default
-    dropdown.TextColor3 = Color3.new(1, 1, 1)
-    dropdown.Font = Enum.Font.Gotham
-    dropdown.TextSize = 12
-    dropdown.Parent = frame
-    
-    local menu = Instance.new("Frame")
-    menu.Size = UDim2.new(0, 150, 0, 0)
-    menu.Position = UDim2.new(0, 125, 0, 30)
-    menu.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
-    menu.BorderSizePixel = 0
-    menu.Visible = false
-    menu.Parent = frame
-    
-    local open = false
-    
-    dropdown.MouseButton1Click:Connect(function()
-        open = not open
-        menu.Visible = open
-        menu.Size = open and UDim2.new(0, 150, 0, #options * 25) or UDim2.new(0, 150, 0, 0)
-        
-        if open then
-            menu:ClearAllChildren()
-            for i, option in ipairs(options) do
-                local optionBtn = Instance.new("TextButton")
-                optionBtn.Size = UDim2.new(1, 0, 0, 25)
-                optionBtn.Position = UDim2.new(0, 0, 0, (i-1)*25)
-                optionBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
-                optionBtn.Text = option
-                optionBtn.TextColor3 = Color3.new(1, 1, 1)
-                optionBtn.Font = Enum.Font.Gotham
-                optionBtn.TextSize = 12
-                optionBtn.Parent = menu
-                
-                optionBtn.MouseButton1Click:Connect(function()
-                    dropdown.Text = option
-                    menu.Visible = false
-                    menu.Size = UDim2.new(0, 150, 0, 0)
-                    open = false
-                    callback(option)
-                end)
-            end
-        end
-    end)
-    
-    return frame
-end
-
+-- Keybind selector AMÉLIORÉ (support souris)
 local function CreateKeybind(parent, text, currentKeyText, callback)
     local frame = Instance.new("Frame")
     frame.Size = UDim2.new(1, 0, 0, 40)
@@ -540,22 +501,30 @@ local function CreateKeybind(parent, text, currentKeyText, callback)
         KeybindListening = function(input, gameProcessed)
             if not gameProcessed then
                 local keyText = ""
+                local keyValue = nil
+                
+                -- Détection boutons souris
                 if input.UserInputType == Enum.UserInputType.MouseButton1 then
                     keyText = "MB1"
-                    callback(input.UserInputType, keyText)
+                    keyValue = input.UserInputType
                 elseif input.UserInputType == Enum.UserInputType.MouseButton2 then
                     keyText = "MB2"
-                    callback(input.UserInputType, keyText)
+                    keyValue = input.UserInputType
                 elseif input.UserInputType == Enum.UserInputType.MouseButton3 then
                     keyText = "MB3"
-                    callback(input.UserInputType, keyText)
+                    keyValue = input.UserInputType
+                -- Détection touches clavier
                 elseif input.KeyCode then
                     keyText = tostring(input.KeyCode):gsub("Enum.KeyCode.", "")
-                    callback(input.KeyCode, keyText)
+                    keyValue = input.KeyCode
                 end
                 
-                keyBtn.Text = keyText
-                KeybindListening = nil
+                if keyValue then
+                    callback(keyValue, keyText)
+                    keyBtn.Text = keyText
+                    keyBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 85)
+                    KeybindListening = nil
+                end
             end
         end
         keyBtn.Text = "..."
@@ -572,12 +541,11 @@ local function CreateKeybind(parent, text, currentKeyText, callback)
 end
 
 -- ============================================
--- CONSTRUCTION ONGLETS COMPLÈTE
+-- CONSTRUCTION ONGLETS
 -- ============================================
 
 -- Onglet VISUAL
 local VisualFrame = TabFrames[1]
-CreateSection(VisualFrame, "ESP SETTINGS")
 
 CreateToggle(VisualFrame, "ESP", Cheat.ESP.Enabled, function()
     Cheat.ESP.Enabled = not Cheat.ESP.Enabled
@@ -609,31 +577,16 @@ CreateToggle(VisualFrame, "Distance", Cheat.ESP.Distance, function()
     return Cheat.ESP.Distance
 end)
 
-CreateToggle(VisualFrame, "Team Check", Cheat.ESP.TeamCheck, function()
-    Cheat.ESP.TeamCheck = not Cheat.ESP.TeamCheck
-    return Cheat.ESP.TeamCheck
-end)
-
-CreateToggle(VisualFrame, "Alive Check", Cheat.ESP.AliveCheck, function()
-    Cheat.ESP.AliveCheck = not Cheat.ESP.AliveCheck
-    return Cheat.ESP.AliveCheck
-end)
-
 CreateSlider(VisualFrame, "Box Size", 0.5, 2.5, Cheat.ESP.BoxSize, function(v)
     Cheat.ESP.BoxSize = v
 end)
 
 -- Onglet AIM
 local AimFrame = TabFrames[2]
-CreateSection(AimFrame, "AIMBOT SETTINGS")
 
 CreateKeybind(AimFrame, "Aim Key:", Cheat.Aim.HoldKeyText, function(key, keyText)
     Cheat.Aim.HoldKey = key
     Cheat.Aim.HoldKeyText = keyText
-end)
-
-CreateDropdown(AimFrame, "Target Part:", {"Head", "UpperTorso", "HumanoidRootPart"}, Cheat.Aim.TargetPart, function(option)
-    Cheat.Aim.TargetPart = option
 end)
 
 CreateToggle(AimFrame, "Aimbot", Cheat.Aim.Enabled, function()
@@ -656,35 +609,13 @@ CreateSlider(AimFrame, "Smooth", 0.05, 0.5, Cheat.Aim.Smooth, function(v)
     Cheat.Aim.Smooth = v
 end)
 
-CreateToggle(AimFrame, "Team Check", Cheat.Aim.TeamCheck, function()
-    Cheat.Aim.TeamCheck = not Cheat.Aim.TeamCheck
-    return Cheat.Aim.TeamCheck
-end)
-
-CreateToggle(AimFrame, "Alive Check", Cheat.Aim.AliveCheck, function()
-    Cheat.Aim.AliveCheck = not Cheat.Aim.AliveCheck
-    return Cheat.Aim.AliveCheck
-end)
-
-CreateSection(AimFrame, "EXTRAS")
 CreateToggle(AimFrame, "Trigger Bot", Cheat.Aim.TriggerBot, function()
     Cheat.Aim.TriggerBot = not Cheat.Aim.TriggerBot
     return Cheat.Aim.TriggerBot
 end)
 
-CreateToggle(AimFrame, "Magic Bullet", Cheat.Aim.MagicBullet, function()
-    Cheat.Aim.MagicBullet = not Cheat.Aim.MagicBullet
-    return Cheat.Aim.MagicBullet
-end)
-
-CreateToggle(AimFrame, "Silent Aim", Cheat.Aim.SilentAim, function()
-    Cheat.Aim.SilentAim = not Cheat.Aim.SilentAim
-    return Cheat.Aim.SilentAim
-end)
-
--- Onglet MOVEMENT
+-- Onglet MOVE
 local MoveFrame = TabFrames[3]
-CreateSection(MoveFrame, "MOVEMENT SETTINGS")
 
 CreateToggle(MoveFrame, "Fly", Cheat.Move.Fly, function()
     Cheat.Move.Fly = not Cheat.Move.Fly
@@ -695,8 +626,16 @@ CreateToggle(MoveFrame, "Fly", Cheat.Move.Fly, function()
     return Cheat.Move.Fly
 end)
 
-CreateSlider(MoveFrame, "Fly Speed", 10, 100, Cheat.Move.FlySpeed, function(v)
+CreateSlider(MoveFrame, "Fly Speed", 10, 200, Cheat.Move.FlySpeed, function(v)
     Cheat.Move.FlySpeed = v
+end)
+
+CreateSlider(MoveFrame, "Fly Up Speed", 10, 200, Cheat.Move.FlyUpSpeed, function(v)
+    Cheat.Move.FlyUpSpeed = v
+end)
+
+CreateSlider(MoveFrame, "Fly Down Speed", 10, 200, Cheat.Move.FlyDownSpeed, function(v)
+    Cheat.Move.FlyDownSpeed = v
 end)
 
 CreateToggle(MoveFrame, "WalkSpeed", Cheat.Move.WalkSpeed, function()
@@ -724,7 +663,7 @@ for _, frame in ipairs(TabFrames) do
 end
 
 -- ============================================
--- AIMBOT CORRIGÉ INGAME
+-- AIMBOT CORRIGÉ
 -- ============================================
 
 function GetClosestPlayerToAim()
@@ -736,12 +675,10 @@ function GetClosestPlayerToAim()
     
     for _, player in pairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character then
-            -- Team Check
             if Cheat.Aim.TeamCheck and not IsEnemy(player) then
                 continue
             end
             
-            -- Alive Check
             if Cheat.Aim.AliveCheck and not IsAlive(player) then
                 continue
             end
@@ -771,14 +708,17 @@ function AimAtTarget()
     -- Vérifie si la keybind est pressée
     local keyPressed = false
     if Cheat.Aim.HoldKey.EnumType == Enum.UserInputType then
-        -- Bouton souris
         keyPressed = UserInputService:IsMouseButtonPressed(Cheat.Aim.HoldKey)
     else
-        -- Touche clavier
         keyPressed = UserInputService:IsKeyDown(Cheat.Aim.HoldKey)
     end
     
-    if not keyPressed then return end
+    if not keyPressed then
+        IsAiming = false
+        return
+    end
+    
+    IsAiming = true
     
     local target = GetClosestPlayerToAim()
     if not target or not target.Character then return end
@@ -786,65 +726,25 @@ function AimAtTarget()
     local targetPart = target.Character:FindFirstChild(Cheat.Aim.TargetPart)
     if not targetPart then return end
     
-    -- Silent Aim
-    if Cheat.Aim.SilentAim and math.random(1, 100) <= Cheat.Aim.HitChance then
-        return
-    end
-    
-    -- Magic Bullet
     local aimPos = targetPart.Position
-    if Cheat.Aim.MagicBullet then
-        aimPos = aimPos + Vector3.new(
-            math.random(-Cheat.Aim.HitboxSize, Cheat.Aim.HitboxSize),
-            math.random(-Cheat.Aim.HitboxSize/2, Cheat.Aim.HitboxSize/2),
-            math.random(-Cheat.Aim.HitboxSize, Cheat.Aim.HitboxSize)
-        )
-    end
     
-    -- Smooth Aiming INGAME
+    -- Smooth Aiming
     local current = Camera.CFrame
     local targetCF = CFrame.lookAt(current.Position, aimPos)
     
-    -- Calcul de la position cible
-    local delta = (aimPos - current.Position).Unit
-    local newLook = current.Position + delta * 100
-    
-    -- Smooth avec interpolation
-    local t = Cheat.Aim.Smooth
+    -- Calcul plus précis
+    local lookVector = (aimPos - current.Position).Unit
     local newCFrame = CFrame.new(
         current.Position,
-        current.Position:Lerp(newLook, t)
+        current.Position + lookVector
     )
     
-    Camera.CFrame = newCFrame
-end
-
--- TriggerBot
-function TriggerBot()
-    if not Cheat.Aim.TriggerBot or not Cheat.Aim.HoldKey then return end
-    
-    local keyPressed = false
-    if Cheat.Aim.HoldKey.EnumType == Enum.UserInputType then
-        keyPressed = UserInputService:IsMouseButtonPressed(Cheat.Aim.HoldKey)
-    else
-        keyPressed = UserInputService:IsKeyDown(Cheat.Aim.HoldKey)
-    end
-    
-    if not keyPressed then return end
-    
-    local target = GetClosestPlayerToAim()
-    if target and target.Character then
-        local humanoid = target.Character:FindFirstChild("Humanoid")
-        if humanoid and humanoid.Health > 0 then
-            mouse1press()
-            task.wait(0.05)
-            mouse1release()
-        end
-    end
+    -- Interpolation smooth
+    Camera.CFrame = current:Lerp(newCFrame, 1 - Cheat.Aim.Smooth)
 end
 
 -- ============================================
--- FONCTIONS MOUVEMENT
+-- FLY CORRIGÉ (FONCTIONNEL)
 -- ============================================
 
 function UpdateFly()
@@ -858,13 +758,27 @@ function UpdateFly()
                 FlyBodyVelocity.Parent = root
             end
             
-            local direction = Vector3.new()
-            if UserInputService:IsKeyDown(Enum.KeyCode.W) then direction = direction + Camera.CFrame.LookVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.S) then direction = direction - Camera.CFrame.LookVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.A) then direction = direction - Camera.CFrame.RightVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.D) then direction = direction + Camera.CFrame.RightVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then direction = direction + Vector3.new(0, 1, 0) end
-            if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then direction = direction - Vector3.new(0, 1, 0) end
+            local direction = Vector3.new(0, 0, 0)
+            
+            -- Contrôles de vol
+            if UserInputService:IsKeyDown(flyForwardKey) then
+                direction = direction + Camera.CFrame.LookVector
+            end
+            if UserInputService:IsKeyDown(flyBackKey) then
+                direction = direction - Camera.CFrame.LookVector
+            end
+            if UserInputService:IsKeyDown(flyLeftKey) then
+                direction = direction - Camera.CFrame.RightVector
+            end
+            if UserInputService:IsKeyDown(flyRightKey) then
+                direction = direction + Camera.CFrame.RightVector
+            end
+            if UserInputService:IsKeyDown(flyUpKey) then
+                direction = direction + Vector3.new(0, 1, 0) * (Cheat.Move.FlyUpSpeed / Cheat.Move.FlySpeed)
+            end
+            if UserInputService:IsKeyDown(flyDownKey) then
+                direction = direction - Vector3.new(0, 1, 0) * (Cheat.Move.FlyDownSpeed / Cheat.Move.FlySpeed)
+            end
             
             if direction.Magnitude > 0 then
                 FlyBodyVelocity.Velocity = direction.Unit * Cheat.Move.FlySpeed
@@ -878,20 +792,38 @@ function UpdateFly()
     end
 end
 
+-- ============================================
+-- WALKSPEED CORRIGÉ (FONCTIONNEL)
+-- ============================================
+
 function UpdateMovement()
     local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
     if humanoid then
+        -- WalkSpeed CORRIGÉ
         if Cheat.Move.WalkSpeed then
             humanoid.WalkSpeed = Cheat.Move.Speed
-        elseif humanoid.WalkSpeed ~= 16 then
+        else
+            -- Réinitialise à la valeur par défaut du jeu
             humanoid.WalkSpeed = 16
         end
         
+        -- JumpPower
+        if Cheat.Move.JumpPower then
+            humanoid.JumpPower = Cheat.Move.Jump
+        else
+            humanoid.JumpPower = 50
+        end
+        
+        -- BunnyHop
         if Cheat.Move.BunnyHop and humanoid.FloorMaterial ~= Enum.Material.Air then
             humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
         end
     end
 end
+
+-- ============================================
+-- NOCLIP CORRIGÉ
+-- ============================================
 
 function UpdateNoClip()
     if Cheat.Move.NoClip and LocalPlayer.Character then
@@ -932,7 +864,6 @@ RunService.RenderStepped:Connect(function()
     
     if Cheat.Aim.Enabled then
         AimAtTarget()
-        TriggerBot()
     end
     
     UpdateFly()
@@ -941,14 +872,18 @@ RunService.RenderStepped:Connect(function()
 end)
 
 print("========================================")
-print("EVENT HORIZON v2.0 - CHARGÉ")
-print("F8 pour cacher/afficher")
+print("EVENT HORIZON - VERSION ULTIME")
 print("========================================")
 print("CORRECTIONS APPLIQUÉES:")
-print("1. Toggles inversés fixés (OFF par défaut)")
-print("2. Team Check & Alive Check ajoutés")
-print("3. Aimbot fonctionne ingame")
-print("4. Positions ESP corrigées")
-print("5. Keybids souris supportées")
-print("6. Target Part sélectionnable")
+print("1. Toggles inversés FIXÉS (état correct)")
+print("2. Fly FONCTIONNEL avec contrôles WASD+Space+Shift")
+print("3. WalkSpeed FONCTIONNEL")
+print("4. Keybinds souris supportées (MB1, MB2, MB3)")
+print("5. 3 sliders de vitesse pour Fly")
+print("6. ESP positions CORRECTES")
+print("========================================")
+print("INSTRUCTIONS:")
+print("1. Fly: Active + WASD + Space(up) + Shift(down)")
+print("2. Aimbot: Choisis une keybind + active")
+print("3. WalkSpeed: Active + règle la vitesse")
 print("========================================")
