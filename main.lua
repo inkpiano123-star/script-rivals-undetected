@@ -1,6 +1,6 @@
 -- ============================================
--- EVENT HORIZON v3.0 - RIVALS CHEAT
--- GUI Fluent Design | Insert Key | Full Features
+-- EVENT HORIZON v4.0 - RIVALS CHEAT
+-- GUI Fixé | NoClip Auto | Full Features
 -- ============================================
 
 -- Services
@@ -64,39 +64,26 @@ local EventHorizon = {
         JumpPower = false,
         JumpValue = 55,
         BunnyHop = false,
-        NoClip = false,
-        NoClipKey = Enum.KeyCode.H
+        NoClip = false
     }
 }
 
 -- États
 local IsAimKeyDown = false
-local IsGUIEnabled = false
+local IsGUIEnabled = true  -- GUI visible par défaut
 local ESPDrawings = {}
 local ChamsAdornments = {}
 local FlyBodyVelocity
 
 -- ============================================
--- FONCTIONS CORE (Aimbot, Visuals, etc.)
+-- FONCTIONS CORE
 -- ============================================
 
--- Détection des touches
+-- Détection de la touche Aimbot
 UserInputService.InputBegan:Connect(function(Input, GameProcessed)
     if not GameProcessed then
-        -- Touche Insert pour GUI
-        if Input.KeyCode == Enum.KeyCode.Insert then
-            ToggleGUI()
-        end
-        
-        -- Touche Aimbot
         if Input.UserInputType == EventHorizon.Aim.LockKey then
             IsAimKeyDown = true
-        end
-        
-        -- Touche NoClip
-        if Input.KeyCode == EventHorizon.Misc.NoClipKey then
-            EventHorizon.Misc.NoClip = not EventHorizon.Misc.NoClip
-            UpdateNoClipButton()
         end
     end
 end)
@@ -389,8 +376,18 @@ function UpdateMovement()
     end
 end
 
+function UpdateNoClip()
+    if EventHorizon.Misc.NoClip and LocalPlayer.Character then
+        for _, Part in pairs(LocalPlayer.Character:GetChildren()) do
+            if Part:IsA("BasePart") then
+                Part.CanCollide = false
+            end
+        end
+    end
+end
+
 -- ============================================
--- GUI FLUENT DESIGN MODERNE
+-- GUI SIMPLE ET FONCTIONNEL
 -- ============================================
 
 -- Création du GUI principal
@@ -401,67 +398,45 @@ ScreenGui.Parent = CoreGui
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 520, 0, 420)
-MainFrame.Position = UDim2.new(0.5, -260, 0.5, -210)
-MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 15)
+MainFrame.Size = UDim2.new(0, 500, 0, 400)
+MainFrame.Position = UDim2.new(0.5, -250, 0.5, -200)
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 25)
 MainFrame.BorderSizePixel = 0
-MainFrame.Visible = false
+MainFrame.Visible = true
 MainFrame.Active = true
 MainFrame.Draggable = true
 MainFrame.Parent = ScreenGui
 
--- Ombre
-local Shadow = Instance.new("ImageLabel")
-Shadow.Name = "Shadow"
-Shadow.Size = UDim2.new(1, 10, 1, 10)
-Shadow.Position = UDim2.new(0, -5, 0, -5)
-Shadow.BackgroundTransparency = 1
-Shadow.Image = "rbxassetid://5554236805"
-Shadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
-Shadow.ImageTransparency = 0.8
-Shadow.ScaleType = Enum.ScaleType.Slice
-Shadow.SliceCenter = Rect.new(10, 10, 118, 118)
-Shadow.Parent = MainFrame
-
--- Header avec effet dégradé
+-- Header
 local Header = Instance.new("Frame")
 Header.Name = "Header"
 Header.Size = UDim2.new(1, 0, 0, 40)
-Header.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+Header.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
 Header.BorderSizePixel = 0
 Header.Parent = MainFrame
 
-local Gradient = Instance.new("UIGradient")
-Gradient.Color = ColorSequence.new{
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 150, 255)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(138, 43, 226))
-}
-Gradient.Rotation = 90
-Gradient.Parent = Header
-
 local Title = Instance.new("TextLabel")
 Title.Name = "Title"
-Title.Size = UDim2.new(0, 200, 1, 0)
+Title.Size = UDim2.new(0.7, 0, 1, 0)
 Title.Position = UDim2.new(0, 15, 0, 0)
 Title.BackgroundTransparency = 1
-Title.Text = "EVENT HORIZON v3.0"
-Title.TextColor3 = Color3.new(1, 1, 1)
+Title.Text = "EVENT HORIZON v4.0"
+Title.TextColor3 = Color3.fromRGB(0, 200, 255)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 18
 Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.Parent = Header
 
-local Subtitle = Instance.new("TextLabel")
-Subtitle.Name = "Subtitle"
-Subtitle.Size = UDim2.new(0, 200, 0, 16)
-Subtitle.Position = UDim2.new(0, 15, 0, 40)
-Subtitle.BackgroundTransparency = 1
-Subtitle.Text = "RIVALS CHEAT • INSERT TO TOGGLE"
-Subtitle.TextColor3 = Color3.fromRGB(150, 150, 200)
-Subtitle.Font = Enum.Font.Gotham
-Subtitle.TextSize = 11
-Subtitle.TextXAlignment = Enum.TextXAlignment.Left
-Subtitle.Parent = MainFrame
+local KeybindInfo = Instance.new("TextLabel")
+KeybindInfo.Name = "KeybindInfo"
+KeybindInfo.Size = UDim2.new(0.25, 0, 1, 0)
+KeybindInfo.Position = UDim2.new(0.75, 0, 0, 0)
+KeybindInfo.BackgroundTransparency = 1
+KeybindInfo.Text = "[INSERT] TOGGLE"
+KeybindInfo.TextColor3 = Color3.fromRGB(150, 150, 200)
+KeybindInfo.Font = Enum.Font.Gotham
+KeybindInfo.TextSize = 12
+KeybindInfo.Parent = Header
 
 -- Boutons d'onglet
 local Tabs = {"AIMBOT", "VISUALS", "SKINS", "MISC"}
@@ -470,8 +445,8 @@ local TabFrames = {}
 
 local TabContainer = Instance.new("Frame")
 TabContainer.Name = "TabContainer"
-TabContainer.Size = UDim2.new(1, -30, 1, -90)
-TabContainer.Position = UDim2.new(0, 15, 0, 70)
+TabContainer.Size = UDim2.new(1, -30, 1, -80)
+TabContainer.Position = UDim2.new(0, 15, 0, 60)
 TabContainer.BackgroundTransparency = 1
 TabContainer.Parent = MainFrame
 
@@ -480,28 +455,15 @@ for i, TabName in ipairs(Tabs) do
     -- Bouton d'onglet
     local TabButton = Instance.new("TextButton")
     TabButton.Name = TabName .. "Tab"
-    TabButton.Size = UDim2.new(0.24, -2, 0, 32)
-    TabButton.Position = UDim2.new(0.25 * (i-1), 5, 0, 60)
-    TabButton.BackgroundColor3 = i == 1 and Color3.fromRGB(40, 100, 180) or Color3.fromRGB(30, 30, 45)
+    TabButton.Size = UDim2.new(0.23, 0, 0, 30)
+    TabButton.Position = UDim2.new(0.23 * (i-1), 10, 0, 45)
+    TabButton.BackgroundColor3 = i == 1 and Color3.fromRGB(40, 100, 180) or Color3.fromRGB(35, 35, 50)
     TabButton.BorderSizePixel = 0
     TabButton.Text = TabName
     TabButton.TextColor3 = Color3.new(1, 1, 1)
     TabButton.Font = Enum.Font.GothamSemibold
-    TabButton.TextSize = 13
+    TabButton.TextSize = 12
     TabButton.Parent = MainFrame
-    
-    -- Effet au survol
-    TabButton.MouseEnter:Connect(function()
-        if TabButton.BackgroundColor3 ~= Color3.fromRGB(40, 100, 180) then
-            TabButton.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
-        end
-    end)
-    
-    TabButton.MouseLeave:Connect(function()
-        if TabButton.BackgroundColor3 ~= Color3.fromRGB(40, 100, 180) then
-            TabButton.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
-        end
-    end)
     
     TabButton.MouseButton1Click:Connect(function()
         SwitchTab(i)
@@ -524,32 +486,11 @@ end
 function SwitchTab(Index)
     for i = 1, #Tabs do
         TabFrames[i].Visible = i == Index
-        TabButtons[i].BackgroundColor3 = i == Index and Color3.fromRGB(40, 100, 180) or Color3.fromRGB(30, 30, 45)
+        TabButtons[i].BackgroundColor3 = i == Index and Color3.fromRGB(40, 100, 180) or Color3.fromRGB(35, 35, 50)
     end
 end
 
--- Fonctions de création d'éléments UI
-local function CreateSection(Parent, TitleText)
-    local Section = Instance.new("Frame")
-    Section.Name = TitleText .. "Section"
-    Section.Size = UDim2.new(1, 0, 0, 30)
-    Section.BackgroundTransparency = 1
-    Section.Parent = Parent
-    
-    local Label = Instance.new("TextLabel")
-    Label.Name = "Label"
-    Label.Size = UDim2.new(1, 0, 1, 0)
-    Label.BackgroundTransparency = 1
-    Label.Text = TitleText
-    Label.TextColor3 = Color3.fromRGB(0, 200, 255)
-    Label.Font = Enum.Font.GothamBold
-    Label.TextSize = 14
-    Label.TextXAlignment = Enum.TextXAlignment.Left
-    Label.Parent = Section
-    
-    return Section
-end
-
+-- Fonction pour créer des éléments de l'interface
 local function CreateToggle(Parent, Text, DefaultState, Callback)
     local ToggleFrame = Instance.new("Frame")
     ToggleFrame.Name = Text .. "Toggle"
@@ -581,13 +522,13 @@ end
 local function CreateSlider(Parent, Text, Min, Max, Default, Callback)
     local SliderFrame = Instance.new("Frame")
     SliderFrame.Name = Text .. "Slider"
-    SliderFrame.Size = UDim2.new(1, 0, 0, 45)
+    SliderFrame.Size = UDim2.new(1, 0, 0, 50)
     SliderFrame.BackgroundTransparency = 1
     SliderFrame.Parent = Parent
     
     local Label = Instance.new("TextLabel")
     Label.Name = "Label"
-    Label.Size = UDim2.new(1, 0, 0, 18)
+    Label.Size = UDim2.new(1, 0, 0, 20)
     Label.Position = UDim2.new(0, 0, 0, 0)
     Label.BackgroundTransparency = 1
     Label.Text = Text .. ": " .. Default
@@ -597,46 +538,46 @@ local function CreateSlider(Parent, Text, Min, Max, Default, Callback)
     Label.TextXAlignment = Enum.TextXAlignment.Left
     Label.Parent = SliderFrame
     
-    local SliderBackground = Instance.new("Frame")
-    SliderBackground.Name = "Background"
-    SliderBackground.Size = UDim2.new(1, 0, 0, 6)
-    SliderBackground.Position = UDim2.new(0, 0, 0, 25)
-    SliderBackground.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-    SliderBackground.BorderSizePixel = 0
-    SliderBackground.Parent = SliderFrame
+    local SliderBar = Instance.new("Frame")
+    SliderBar.Name = "SliderBar"
+    SliderBar.Size = UDim2.new(1, 0, 0, 6)
+    SliderBar.Position = UDim2.new(0, 0, 0, 30)
+    SliderBar.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+    SliderBar.BorderSizePixel = 0
+    SliderBar.Parent = SliderFrame
     
     local SliderFill = Instance.new("Frame")
-    SliderFill.Name = "Fill"
+    SliderFill.Name = "SliderFill"
     SliderFill.Size = UDim2.new((Default - Min) / (Max - Min), 0, 1, 0)
     SliderFill.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
     SliderFill.BorderSizePixel = 0
-    SliderFill.Parent = SliderBackground
+    SliderFill.Parent = SliderBar
     
     local SliderButton = Instance.new("TextButton")
-    SliderButton.Name = "Button"
-    SliderButton.Size = UDim2.new(0, 18, 0, 18)
-    SliderButton.Position = UDim2.new((Default - Min) / (Max - Min), -9, 0.5, -9)
+    SliderButton.Name = "SliderButton"
+    SliderButton.Size = UDim2.new(0, 16, 0, 16)
+    SliderButton.Position = UDim2.new((Default - Min) / (Max - Min), -8, 0.5, -8)
     SliderButton.BackgroundColor3 = Color3.new(1, 1, 1)
     SliderButton.Text = ""
-    SliderButton.Parent = SliderBackground
+    SliderButton.Parent = SliderBar
     
     local Dragging = false
     SliderButton.MouseButton1Down:Connect(function()
         Dragging = true
     end)
     
-    game:GetService("UserInputService").InputEnded:Connect(function(Input)
+    UserInputService.InputEnded:Connect(function(Input)
         if Input.UserInputType == Enum.UserInputType.MouseButton1 then
             Dragging = false
         end
     end)
     
     local function UpdateSlider(X)
-        local RelativeX = math.clamp(X - SliderBackground.AbsolutePosition.X, 0, SliderBackground.AbsoluteSize.X)
-        local Value = math.floor(Min + (RelativeX / SliderBackground.AbsoluteSize.X) * (Max - Min))
+        local RelativeX = math.clamp(X - SliderBar.AbsolutePosition.X, 0, SliderBar.AbsoluteSize.X)
+        local Value = math.floor(Min + (RelativeX / SliderBar.AbsoluteSize.X) * (Max - Min))
         
         SliderFill.Size = UDim2.new((Value - Min) / (Max - Min), 0, 1, 0)
-        SliderButton.Position = UDim2.new((Value - Min) / (Max - Min), -9, 0.5, -9)
+        SliderButton.Position = UDim2.new((Value - Min) / (Max - Min), -8, 0.5, -8)
         Label.Text = Text .. ": " .. Value
         
         Callback(Value)
@@ -648,106 +589,18 @@ local function CreateSlider(Parent, Text, Min, Max, Default, Callback)
         end
     end)
     
-    SliderBackground.MouseButton1Down:Connect(function(X, Y)
+    SliderBar.MouseButton1Down:Connect(function(X, Y)
         UpdateSlider(X)
     end)
     
     return SliderFrame
 end
 
-local function CreateDropdown(Parent, Text, Options, Default, Callback)
-    local DropdownFrame = Instance.new("Frame")
-    DropdownFrame.Name = Text .. "Dropdown"
-    DropdownFrame.Size = UDim2.new(1, 0, 0, 45)
-    DropdownFrame.BackgroundTransparency = 1
-    DropdownFrame.Parent = Parent
-    
-    local Label = Instance.new("TextLabel")
-    Label.Name = "Label"
-    Label.Size = UDim2.new(1, 0, 0, 18)
-    Label.Position = UDim2.new(0, 0, 0, 0)
-    Label.BackgroundTransparency = 1
-    Label.Text = Text
-    Label.TextColor3 = Color3.fromRGB(200, 200, 200)
-    Label.Font = Enum.Font.Gotham
-    Label.TextSize = 12
-    Label.TextXAlignment = Enum.TextXAlignment.Left
-    Label.Parent = DropdownFrame
-    
-    local DropdownButton = Instance.new("TextButton")
-    DropdownButton.Name = "Button"
-    DropdownButton.Size = UDim2.new(1, 0, 0, 25)
-    DropdownButton.Position = UDim2.new(0, 0, 0, 20)
-    DropdownButton.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-    DropdownButton.BorderSizePixel = 0
-    DropdownButton.Text = Default
-    DropdownButton.TextColor3 = Color3.new(1, 1, 1)
-    DropdownButton.Font = Enum.Font.Gotham
-    DropdownButton.TextSize = 12
-    DropdownButton.Parent = DropdownFrame
-    
-    local DropdownMenu = Instance.new("Frame")
-    DropdownMenu.Name = "Menu"
-    DropdownMenu.Size = UDim2.new(1, 0, 0, 0)
-    DropdownMenu.Position = UDim2.new(0, 0, 0, 47)
-    DropdownMenu.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-    DropdownMenu.BorderSizePixel = 0
-    DropdownMenu.ClipsDescendants = true
-    DropdownMenu.Visible = false
-    DropdownMenu.Parent = DropdownFrame
-    
-    local UIListLayout = Instance.new("UIListLayout")
-    UIListLayout.Parent = DropdownMenu
-    
-    for _, Option in pairs(Options) do
-        local OptionButton = Instance.new("TextButton")
-        OptionButton.Name = Option
-        OptionButton.Size = UDim2.new(1, 0, 0, 25)
-        OptionButton.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-        OptionButton.BorderSizePixel = 0
-        OptionButton.Text = Option
-        OptionButton.TextColor3 = Color3.new(1, 1, 1)
-        OptionButton.Font = Enum.Font.Gotham
-        OptionButton.TextSize = 12
-        OptionButton.Parent = DropdownMenu
-        
-        OptionButton.MouseButton1Click:Connect(function()
-            DropdownButton.Text = Option
-            DropdownMenu.Visible = false
-            Callback(Option)
-        end)
-        
-        OptionButton.MouseEnter:Connect(function()
-            OptionButton.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
-        end)
-        
-        OptionButton.MouseLeave:Connect(function()
-            OptionButton.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-        end)
-    end
-    
-    DropdownButton.MouseButton1Click:Connect(function()
-        DropdownMenu.Visible = not DropdownMenu.Visible
-        DropdownMenu.Size = DropdownMenu.Visible and UDim2.new(1, 0, 0, #Options * 25) or UDim2.new(1, 0, 0, 0)
-    end)
-    
-    return DropdownFrame
-end
-
 -- Construction de l'onglet AIMBOT
 local AimFrame = TabFrames[1]
-CreateSection(AimFrame, "AIMBOT SETTINGS")
 CreateToggle(AimFrame, "AIMBOT", EventHorizon.Aim.Enabled, function()
     EventHorizon.Aim.Enabled = not EventHorizon.Aim.Enabled
     return EventHorizon.Aim.Enabled
-end)
-
-CreateDropdown(AimFrame, "LOCK KEY", {"MouseButton2", "MouseButton1", "LeftControl"}, "MouseButton2", function(Value)
-    EventHorizon.Aim.LockKey = Enum.UserInputType[Value]
-end)
-
-CreateDropdown(AimFrame, "TARGET PART", {"Head", "UpperTorso", "HumanoidRootPart"}, "Head", function(Value)
-    EventHorizon.Aim.TargetPart = Value
 end)
 
 CreateSlider(AimFrame, "FOV", 10, 500, EventHorizon.Aim.FOV, function(Value)
@@ -758,24 +611,14 @@ CreateSlider(AimFrame, "SMOOTHNESS", 0.01, 1, EventHorizon.Aim.Smoothness, funct
     EventHorizon.Aim.Smoothness = Value
 end)
 
-CreateSection(AimFrame, "EXTRAS")
 CreateToggle(AimFrame, "TRIGGER BOT", EventHorizon.Aim.TriggerBot, function()
     EventHorizon.Aim.TriggerBot = not EventHorizon.Aim.TriggerBot
     return EventHorizon.Aim.TriggerBot
 end)
 
-CreateToggle(AimFrame, "FAST SHOOT", EventHorizon.Aim.FastShoot, function()
-    EventHorizon.Aim.FastShoot = not EventHorizon.Aim.FastShoot
-    return EventHorizon.Aim.FastShoot
-end)
-
 CreateToggle(AimFrame, "MAGIC BULLET", EventHorizon.Aim.MagicBullet, function()
     EventHorizon.Aim.MagicBullet = not EventHorizon.Aim.MagicBullet
     return EventHorizon.Aim.MagicBullet
-end)
-
-CreateSlider(AimFrame, "MAGIC HITBOX", 1, 20, EventHorizon.Aim.MagicHitbox, function(Value)
-    EventHorizon.Aim.MagicHitbox = Value
 end)
 
 CreateToggle(AimFrame, "SILENT AIM", EventHorizon.Aim.SilentAim, function()
@@ -789,14 +632,9 @@ end)
 
 -- Construction de l'onglet VISUALS
 local VisualFrame = TabFrames[2]
-CreateSection(VisualFrame, "ESP SETTINGS")
 CreateToggle(VisualFrame, "ESP", EventHorizon.Visual.ESP, function()
     EventHorizon.Visual.ESP = not EventHorizon.Visual.ESP
     return EventHorizon.Visual.ESP
-end)
-
-CreateDropdown(VisualFrame, "BOX TYPE", {"2D Box", "2D Corner", "None"}, "2D Corner", function(Value)
-    EventHorizon.Visual.BoxType = Value
 end)
 
 CreateToggle(VisualFrame, "TRACERS", EventHorizon.Visual.Tracers, function()
@@ -804,8 +642,9 @@ CreateToggle(VisualFrame, "TRACERS", EventHorizon.Visual.Tracers, function()
     return EventHorizon.Visual.Tracers
 end)
 
-CreateDropdown(VisualFrame, "TRACER ORIGIN", {"Top", "Middle", "Bottom"}, "Bottom", function(Value)
-    EventHorizon.Visual.TracerOrigin = Value
+CreateToggle(VisualFrame, "CHAMS", EventHorizon.Visual.Chams, function()
+    EventHorizon.Visual.Chams = not EventHorizon.Visual.Chams
+    return EventHorizon.Visual.Chams
 end)
 
 CreateToggle(VisualFrame, "SHOW NAMES", EventHorizon.Visual.ShowNames, function()
@@ -818,31 +657,15 @@ CreateToggle(VisualFrame, "SHOW DISTANCE", EventHorizon.Visual.ShowDistance, fun
     return EventHorizon.Visual.ShowDistance
 end)
 
-CreateSection(VisualFrame, "CHAMS")
-CreateToggle(VisualFrame, "CHAMS", EventHorizon.Visual.Chams, function()
-    EventHorizon.Visual.Chams = not EventHorizon.Visual.Chams
-    return EventHorizon.Visual.Chams
-end)
-
 -- Construction de l'onglet SKINS
 local SkinsFrame = TabFrames[3]
-CreateSection(SkinsFrame, "SKIN CHANGER")
-CreateToggle(SkinsFrame, "ENABLE SKINS", EventHorizon.Skins.Enabled, function()
+CreateToggle(SkinsFrame, "SKIN CHANGER", EventHorizon.Skins.Enabled, function()
     EventHorizon.Skins.Enabled = not EventHorizon.Skins.Enabled
     return EventHorizon.Skins.Enabled
 end)
 
-CreateDropdown(SkinsFrame, "WEAPON", EventHorizon.Skins.WeaponList, "Assault Rifle", function(Value)
-    EventHorizon.Skins.SelectedWeapon = Value
-end)
-
-CreateDropdown(SkinsFrame, "SKIN", EventHorizon.Skins.SkinDatabase["Assault Rifle"], "Phoenix Rifle", function(Value)
-    EventHorizon.Skins.SelectedSkin = Value
-end)
-
 -- Construction de l'onglet MISC
 local MiscFrame = TabFrames[4]
-CreateSection(MiscFrame, "MOVEMENT")
 CreateToggle(MiscFrame, "FLY", EventHorizon.Misc.Fly, function()
     EventHorizon.Misc.Fly = not EventHorizon.Misc.Fly
     return EventHorizon.Misc.Fly
@@ -875,15 +698,10 @@ CreateToggle(MiscFrame, "BUNNY HOP", EventHorizon.Misc.BunnyHop, function()
     return EventHorizon.Misc.BunnyHop
 end)
 
-local NoClipToggle = CreateToggle(MiscFrame, "NO CLIP [H]", EventHorizon.Misc.NoClip, function()
+CreateToggle(MiscFrame, "NO CLIP", EventHorizon.Misc.NoClip, function()
     EventHorizon.Misc.NoClip = not EventHorizon.Misc.NoClip
     return EventHorizon.Misc.NoClip
 end)
-
-function UpdateNoClipButton()
-    NoClipToggle.Text = "NO CLIP [H]: " .. (EventHorizon.Misc.NoClip and "ON" or "OFF")
-    NoClipToggle.BackgroundColor3 = EventHorizon.Misc.NoClip and Color3.fromRGB(0, 150, 50) or Color3.fromRGB(150, 50, 50)
-end
 
 -- Bouton de fermeture
 local CloseButton = Instance.new("TextButton")
@@ -902,11 +720,13 @@ CloseButton.MouseButton1Click:Connect(function()
     ScreenGui:Destroy()
 end)
 
--- Fonction pour afficher/cacher le GUI
-function ToggleGUI()
-    IsGUIEnabled = not IsGUIEnabled
-    MainFrame.Visible = IsGUIEnabled
-end
+-- Détection de la touche INSERT pour afficher/cacher le GUI
+UserInputService.InputBegan:Connect(function(Input, GameProcessed)
+    if not GameProcessed and Input.KeyCode == Enum.KeyCode.Insert then
+        MainFrame.Visible = not MainFrame.Visible
+        KeybindInfo.Text = MainFrame.Visible and "[INSERT] HIDE" or "[INSERT] SHOW"
+    end
+end)
 
 -- ============================================
 -- BOUCLE PRINCIPALE
@@ -932,15 +752,7 @@ RunService.RenderStepped:Connect(function()
         -- Misc
         UpdateFly()
         UpdateMovement()
-        
-        -- NoClip
-        if EventHorizon.Misc.NoClip and LocalPlayer.Character then
-            for _, Part in pairs(LocalPlayer.Character:GetChildren()) do
-                if Part:IsA("BasePart") then
-                    Part.CanCollide = false
-                end
-            end
-        end
+        UpdateNoClip()
         
         LastUpdate = Now
     end
@@ -956,6 +768,7 @@ end)
 
 -- Message de confirmation
 print("============================================")
-print("EVENT HORIZON v3.0 - LOADED SUCCESSFULLY")
-print("GUI Key: INSERT | NoClip Key: H")
+print("EVENT HORIZON v4.0 - LOADED SUCCESSFULLY")
+print("Press INSERT to toggle GUI")
+print("NoClip: Toggle in MISC tab (no keybind)")
 print("============================================")
