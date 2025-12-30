@@ -1,6 +1,6 @@
 -- ============================================
--- EVENT HORIZON - VERSION FINALE CORRIGÉE
--- Keybinds sélectionnables | Toggles fixés | FOV visible
+-- EVENT HORIZON - VERSION COMPLÈTE CORRIGÉE
+-- Team check | Alive check | Aimbot ingame | ESP positions fixées
 -- ============================================
 
 -- Services
@@ -12,31 +12,40 @@ local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 local Camera = Workspace.CurrentCamera
 
--- Variables CORRIGÉES (désactivées par défaut)
+-- Variables CORRIGÉES (toggles inversés fixés)
 local Cheat = {
     ESP = {
         Enabled = false,  -- OFF par défaut
         Box = false,
-        Tracers = false,
-        Names = false,
-        Health = false,
-        Distance = false,
-        BoxSize = 1.2,
         BoxColor = Color3.fromRGB(255, 50, 50),
-        TracerColor = Color3.fromRGB(50, 255, 50)
+        Tracers = false,
+        TracerColor = Color3.fromRGB(50, 255, 50),
+        Names = false,
+        NamesColor = Color3.fromRGB(255, 255, 255),
+        Health = false,
+        HealthColor = Color3.fromRGB(0, 255, 0),
+        Distance = false,
+        DistanceColor = Color3.fromRGB(200, 200, 200),
+        BoxSize = 1.2,
+        TeamCheck = true,  -- Ne pas montrer les coéquipiers
+        AliveCheck = true  -- Ne montrer que les vivants
     },
     Aim = {
         Enabled = false,  -- OFF par défaut
-        HoldKey = nil,  -- Pas de keybind par défaut
+        HoldKey = nil,
         HoldKeyText = "NONE",
+        TargetPart = "Head",  -- Head, UpperTorso, HumanoidRootPart
         FOV = 120,
-        ShowFOV = false,  -- Circle FOV visible
+        ShowFOV = false,
+        FOVColor = Color3.fromRGB(255, 255, 255),
         Smooth = 0.15,
         TriggerBot = false,
         MagicBullet = false,
         HitboxSize = 3,
         SilentAim = false,
-        HitChance = 85
+        HitChance = 85,
+        TeamCheck = true,  -- Ne pas viser les coéquipiers
+        AliveCheck = true  -- Ne viser que les vivants
     },
     Move = {
         Fly = false,
@@ -55,51 +64,66 @@ local ESPDrawings = {}
 local IsAiming = false
 local FlyBodyVelocity
 local FOVCircle = Drawing.new("Circle")
-local KeybindListening = nil  -- Pour la sélection de keybinds
+local KeybindListening = nil
 
 -- Initialisation FOV Circle
 FOVCircle.Visible = Cheat.Aim.ShowFOV
-FOVCircle.Color = Color3.fromRGB(255, 255, 255)
+FOVCircle.Color = Cheat.Aim.FOVColor
 FOVCircle.Thickness = 1
 FOVCircle.NumSides = 100
 FOVCircle.Radius = Cheat.Aim.FOV
 FOVCircle.Filled = false
 FOVCircle.Position = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
 
--- Initialisation touches AIM
-function UpdateAimKey()
-    if Cheat.Aim.HoldKey then
-        IsAiming = UserInputService:IsKeyDown(Cheat.Aim.HoldKey) or 
-                  (Cheat.Aim.HoldKey == Enum.UserInputType.MouseButton1 and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1)) or
-                  (Cheat.Aim.HoldKey == Enum.UserInputType.MouseButton2 and UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2))
+-- Fonction Team Check
+function IsEnemy(player)
+    if not Cheat.ESP.TeamCheck and not Cheat.Aim.TeamCheck then
+        return true
     end
+    
+    -- Vérifie si le jeu a un système d'équipe
+    if LocalPlayer.Team and player.Team then
+        return LocalPlayer.Team ~= player.Team
+    end
+    
+    -- Vérifie la couleur du joueur (méthode alternative)
+    if LocalPlayer.TeamColor and player.TeamColor then
+        return LocalPlayer.TeamColor ~= player.TeamColor
+    end
+    
+    return true
 end
 
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if not gameProcessed and Cheat.Aim.HoldKey then
-        if input.KeyCode == Cheat.Aim.HoldKey or input.UserInputType == Cheat.Aim.HoldKey then
-            IsAiming = true
-        end
+-- Fonction Alive Check
+function IsAlive(player)
+    if not Cheat.ESP.AliveCheck and not Cheat.Aim.AliveCheck then
+        return true
     end
-end)
-
-UserInputService.InputEnded:Connect(function(input)
-    if Cheat.Aim.HoldKey and (input.KeyCode == Cheat.Aim.HoldKey or input.UserInputType == Cheat.Aim.HoldKey) then
-        IsAiming = false
+    
+    if player.Character then
+        local humanoid = player.Character:FindFirstChild("Humanoid")
+        return humanoid and humanoid.Health > 0
     end
-end)
+    
+    return false
+end
 
 -- ============================================
--- ESP CORRIGÉ
+-- ESP CORRIGÉ - POSITIONS FIXÉES
 -- ============================================
 
 function UpdateESP()
     for _, player in pairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character then
             local root = player.Character:FindFirstChild("HumanoidRootPart")
-            local hum = player.Character:FindFirstChild("Humanoid")
+            local humanoid = player.Character:FindFirstChild("Humanoid")
             
-            if root and hum and hum.Health > 0 then
+            -- Team Check & Alive Check
+            local shouldShow = true
+            if Cheat.ESP.TeamCheck then shouldShow = shouldShow and IsEnemy(player) end
+            if Cheat.ESP.AliveCheck then shouldShow = shouldShow and IsAlive(player) end
+            
+            if root and humanoid and shouldShow then
                 local pos, onScreen = Camera:WorldToViewportPoint(root.Position)
                 
                 if not ESPDrawings[player] then
@@ -114,7 +138,6 @@ function UpdateESP()
                 
                 local esp = ESPDrawings[player]
                 
-                -- CORRECTION: Vérifie si ESP est activé
                 if Cheat.ESP.Enabled and onScreen then
                     local head = player.Character:FindFirstChild("Head")
                     local headPos = head and Camera:WorldToViewportPoint(head.Position) or pos
@@ -122,16 +145,20 @@ function UpdateESP()
                     local height = math.abs(headPos.Y - pos.Y) * 2 * Cheat.ESP.BoxSize
                     local width = height / 2
                     
-                    -- Box (activé/désactivé selon le toggle)
+                    -- Position de la boîte
+                    local boxX = pos.X - width/2
+                    local boxY = pos.Y - height/2
+                    
+                    -- Box
                     esp.Box.Visible = Cheat.ESP.Box
                     if Cheat.ESP.Box then
                         esp.Box.Color = Cheat.ESP.BoxColor
                         esp.Box.Thickness = 2
                         esp.Box.Size = Vector2.new(width, height)
-                        esp.Box.Position = Vector2.new(pos.X - width/2, pos.Y - height/2)
+                        esp.Box.Position = Vector2.new(boxX, boxY)
                     end
                     
-                    -- Tracer (activé/désactivé selon le toggle)
+                    -- Tracer
                     esp.Tracer.Visible = Cheat.ESP.Tracers
                     if Cheat.ESP.Tracers then
                         esp.Tracer.Color = Cheat.ESP.TracerColor
@@ -140,44 +167,47 @@ function UpdateESP()
                         esp.Tracer.To = Vector2.new(pos.X, pos.Y)
                     end
                     
-                    -- Name (activé/désactivé selon le toggle)
+                    -- Name (POSITION CORRIGÉE - au-dessus de la boîte)
                     esp.Name.Visible = Cheat.ESP.Names
                     if Cheat.ESP.Names then
-                        esp.Name.Color = Color3.new(1, 1, 1)
+                        esp.Name.Color = Cheat.ESP.NamesColor
                         esp.Name.Text = player.Name
-                        esp.Name.Position = Vector2.new(pos.X, pos.Y - height/2 - 20)
+                        esp.Name.Position = Vector2.new(pos.X, boxY - 15)  -- 15 pixels au-dessus
                         esp.Name.Size = 14
                         esp.Name.Center = true
                     end
                     
-                    -- Health (activé/désactivé selon le toggle)
+                    -- Health (POSITION CORRIGÉE - sous la boîte)
                     esp.Health.Visible = Cheat.ESP.Health
                     if Cheat.ESP.Health then
-                        local healthPercent = hum.Health / hum.MaxHealth
-                        local healthColor = Color3.fromRGB(
-                            255 - (healthPercent * 255),
-                            healthPercent * 255,
-                            0
-                        )
+                        local healthPercent = humanoid.Health / humanoid.MaxHealth
+                        local healthColor = Cheat.ESP.HealthColor
+                        
+                        -- Changement de couleur selon la santé
+                        if healthPercent < 0.3 then
+                            healthColor = Color3.fromRGB(255, 50, 50)
+                        elseif healthPercent < 0.6 then
+                            healthColor = Color3.fromRGB(255, 255, 50)
+                        end
+                        
                         esp.Health.Color = healthColor
-                        esp.Health.Text = math.floor(hum.Health)
-                        esp.Health.Position = Vector2.new(pos.X, pos.Y + height/2 + 5)
+                        esp.Health.Text = math.floor(humanoid.Health) .. "/" .. math.floor(humanoid.MaxHealth)
+                        esp.Health.Position = Vector2.new(pos.X, boxY + height + 5)  -- 5 pixels en dessous
                         esp.Health.Size = 12
                         esp.Health.Center = true
                     end
                     
-                    -- Distance (activé/désactivé selon le toggle)
-                    esp.Distance.Visible = Cheat.ESP.Distance and Cheat.ESP.Enabled
-                    if Cheat.ESP.Distance and Cheat.ESP.Enabled then
+                    -- Distance (POSITION CORRIGÉE - sous la santé)
+                    esp.Distance.Visible = Cheat.ESP.Distance
+                    if Cheat.ESP.Distance then
                         local dist = (root.Position - Camera.CFrame.Position).Magnitude
-                        esp.Distance.Color = Color3.fromRGB(200, 200, 200)
+                        esp.Distance.Color = Cheat.ESP.DistanceColor
                         esp.Distance.Text = math.floor(dist) .. " studs"
-                        esp.Distance.Position = Vector2.new(pos.X, pos.Y + height/2 + 25)
+                        esp.Distance.Position = Vector2.new(pos.X, boxY + height + 20)  -- 20 pixels en dessous
                         esp.Distance.Size = 11
                         esp.Distance.Center = true
                     end
                 else
-                    -- Si ESP désactivé, cache tout
                     for _, drawing in pairs(esp) do
                         drawing.Visible = false
                     end
@@ -192,17 +222,7 @@ function UpdateESP()
 end
 
 -- ============================================
--- FOV CIRCLE VISIBLE
--- ============================================
-
-function UpdateFOVCircle()
-    FOVCircle.Visible = Cheat.Aim.ShowFOV
-    FOVCircle.Radius = Cheat.Aim.FOV
-    FOVCircle.Position = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
-end
-
--- ============================================
--- GUI MODERNE AVEC KEYBINDS
+-- GUI AVEC TOUTES LES OPTIONS
 -- ============================================
 
 local ScreenGui = Instance.new("ScreenGui")
@@ -211,8 +231,8 @@ ScreenGui.Parent = game:GetService("CoreGui")
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 400, 0, 450)
-MainFrame.Position = UDim2.new(0.5, -200, 0.5, -225)
+MainFrame.Size = UDim2.new(0, 420, 0, 500)
+MainFrame.Position = UDim2.new(0.5, -210, 0.5, -250)
 MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -220,7 +240,6 @@ MainFrame.Draggable = true
 MainFrame.Visible = true
 MainFrame.Parent = ScreenGui
 
--- Header
 local Header = Instance.new("Frame")
 Header.Size = UDim2.new(1, 0, 0, 50)
 Header.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
@@ -230,7 +249,7 @@ local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, -100, 1, 0)
 Title.Position = UDim2.new(0, 15, 0, 0)
 Title.BackgroundTransparency = 1
-Title.Text = "EVENT HORIZON"
+Title.Text = "EVENT HORIZON v2.0"
 Title.TextColor3 = Color3.fromRGB(0, 200, 255)
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 20
@@ -258,7 +277,6 @@ TabContainer.Position = UDim2.new(0, 10, 0, 80)
 TabContainer.BackgroundTransparency = 1
 TabContainer.Parent = MainFrame
 
--- Création des onglets
 for i, tabName in ipairs(Tabs) do
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(0.32, -5, 0, 35)
@@ -296,7 +314,7 @@ for i, tabName in ipairs(Tabs) do
 end
 
 -- ============================================
--- FONCTIONS UI AVEC KEYBINDS
+-- FONCTIONS UI AMÉLIORÉES
 -- ============================================
 
 local function CreateSection(parent, title)
@@ -318,7 +336,6 @@ local function CreateSection(parent, title)
     return section
 end
 
--- CORRECTION: Fonction toggle avec état correct
 local function CreateToggle(parent, text, default, callback)
     local frame = Instance.new("Frame")
     frame.Size = UDim2.new(1, 0, 0, 32)
@@ -326,7 +343,7 @@ local function CreateToggle(parent, text, default, callback)
     frame.Parent = parent
     
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0, 160, 0, 28)
+    btn.Size = UDim2.new(0, 180, 0, 28)
     btn.Position = UDim2.new(0, 0, 0, 2)
     btn.BackgroundColor3 = default and Color3.fromRGB(0, 160, 60) or Color3.fromRGB(160, 50, 50)
     btn.Text = text
@@ -337,7 +354,7 @@ local function CreateToggle(parent, text, default, callback)
     
     local status = Instance.new("TextLabel")
     status.Size = UDim2.new(0, 60, 0, 28)
-    status.Position = UDim2.new(0, 165, 0, 2)
+    status.Position = UDim2.new(0, 185, 0, 2)
     status.BackgroundColor3 = default and Color3.fromRGB(0, 120, 40) or Color3.fromRGB(120, 40, 40)
     status.Text = default and "ON" or "OFF"
     status.TextColor3 = Color3.new(1, 1, 1)
@@ -415,7 +432,74 @@ local function CreateSlider(parent, text, min, max, default, callback)
     return frame
 end
 
--- NOUVELLE FONCTION: Keybind selector
+local function CreateDropdown(parent, text, options, default, callback)
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(1, 0, 0, 40)
+    frame.BackgroundTransparency = 1
+    frame.Parent = parent
+    
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(0, 120, 0, 25)
+    label.Text = text
+    label.TextColor3 = Color3.new(1, 1, 1)
+    label.Font = Enum.Font.Gotham
+    label.TextSize = 13
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.BackgroundTransparency = 1
+    label.Parent = frame
+    
+    local dropdown = Instance.new("TextButton")
+    dropdown.Size = UDim2.new(0, 150, 0, 28)
+    dropdown.Position = UDim2.new(0, 125, 0, 0)
+    dropdown.BackgroundColor3 = Color3.fromRGB(60, 60, 85)
+    dropdown.Text = default
+    dropdown.TextColor3 = Color3.new(1, 1, 1)
+    dropdown.Font = Enum.Font.Gotham
+    dropdown.TextSize = 12
+    dropdown.Parent = frame
+    
+    local menu = Instance.new("Frame")
+    menu.Size = UDim2.new(0, 150, 0, 0)
+    menu.Position = UDim2.new(0, 125, 0, 30)
+    menu.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+    menu.BorderSizePixel = 0
+    menu.Visible = false
+    menu.Parent = frame
+    
+    local open = false
+    
+    dropdown.MouseButton1Click:Connect(function()
+        open = not open
+        menu.Visible = open
+        menu.Size = open and UDim2.new(0, 150, 0, #options * 25) or UDim2.new(0, 150, 0, 0)
+        
+        if open then
+            menu:ClearAllChildren()
+            for i, option in ipairs(options) do
+                local optionBtn = Instance.new("TextButton")
+                optionBtn.Size = UDim2.new(1, 0, 0, 25)
+                optionBtn.Position = UDim2.new(0, 0, 0, (i-1)*25)
+                optionBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+                optionBtn.Text = option
+                optionBtn.TextColor3 = Color3.new(1, 1, 1)
+                optionBtn.Font = Enum.Font.Gotham
+                optionBtn.TextSize = 12
+                optionBtn.Parent = menu
+                
+                optionBtn.MouseButton1Click:Connect(function()
+                    dropdown.Text = option
+                    menu.Visible = false
+                    menu.Size = UDim2.new(0, 150, 0, 0)
+                    open = false
+                    callback(option)
+                end)
+            end
+        end
+    end)
+    
+    return frame
+end
+
 local function CreateKeybind(parent, text, currentKeyText, callback)
     local frame = Instance.new("Frame")
     frame.Size = UDim2.new(1, 0, 0, 40)
@@ -488,10 +572,10 @@ local function CreateKeybind(parent, text, currentKeyText, callback)
 end
 
 -- ============================================
--- CONSTRUCTION ONGLETS CORRIGÉE
+-- CONSTRUCTION ONGLETS COMPLÈTE
 -- ============================================
 
--- Onglet VISUAL (tous OFF par défaut)
+-- Onglet VISUAL
 local VisualFrame = TabFrames[1]
 CreateSection(VisualFrame, "ESP SETTINGS")
 
@@ -525,18 +609,31 @@ CreateToggle(VisualFrame, "Distance", Cheat.ESP.Distance, function()
     return Cheat.ESP.Distance
 end)
 
+CreateToggle(VisualFrame, "Team Check", Cheat.ESP.TeamCheck, function()
+    Cheat.ESP.TeamCheck = not Cheat.ESP.TeamCheck
+    return Cheat.ESP.TeamCheck
+end)
+
+CreateToggle(VisualFrame, "Alive Check", Cheat.ESP.AliveCheck, function()
+    Cheat.ESP.AliveCheck = not Cheat.ESP.AliveCheck
+    return Cheat.ESP.AliveCheck
+end)
+
 CreateSlider(VisualFrame, "Box Size", 0.5, 2.5, Cheat.ESP.BoxSize, function(v)
     Cheat.ESP.BoxSize = v
 end)
 
--- Onglet AIM avec Keybinds
+-- Onglet AIM
 local AimFrame = TabFrames[2]
 CreateSection(AimFrame, "AIMBOT SETTINGS")
 
--- Keybind pour Aimbot
 CreateKeybind(AimFrame, "Aim Key:", Cheat.Aim.HoldKeyText, function(key, keyText)
     Cheat.Aim.HoldKey = key
     Cheat.Aim.HoldKeyText = keyText
+end)
+
+CreateDropdown(AimFrame, "Target Part:", {"Head", "UpperTorso", "HumanoidRootPart"}, Cheat.Aim.TargetPart, function(option)
+    Cheat.Aim.TargetPart = option
 end)
 
 CreateToggle(AimFrame, "Aimbot", Cheat.Aim.Enabled, function()
@@ -559,6 +656,16 @@ CreateSlider(AimFrame, "Smooth", 0.05, 0.5, Cheat.Aim.Smooth, function(v)
     Cheat.Aim.Smooth = v
 end)
 
+CreateToggle(AimFrame, "Team Check", Cheat.Aim.TeamCheck, function()
+    Cheat.Aim.TeamCheck = not Cheat.Aim.TeamCheck
+    return Cheat.Aim.TeamCheck
+end)
+
+CreateToggle(AimFrame, "Alive Check", Cheat.Aim.AliveCheck, function()
+    Cheat.Aim.AliveCheck = not Cheat.Aim.AliveCheck
+    return Cheat.Aim.AliveCheck
+end)
+
 CreateSection(AimFrame, "EXTRAS")
 CreateToggle(AimFrame, "Trigger Bot", Cheat.Aim.TriggerBot, function()
     Cheat.Aim.TriggerBot = not Cheat.Aim.TriggerBot
@@ -575,7 +682,7 @@ CreateToggle(AimFrame, "Silent Aim", Cheat.Aim.SilentAim, function()
     return Cheat.Aim.SilentAim
 end)
 
--- Onglet MOVEMENT (tous OFF par défaut)
+-- Onglet MOVEMENT
 local MoveFrame = TabFrames[3]
 CreateSection(MoveFrame, "MOVEMENT SETTINGS")
 
@@ -611,32 +718,13 @@ CreateToggle(MoveFrame, "NoClip", Cheat.Move.NoClip, function()
     return Cheat.Move.NoClip
 end)
 
--- Ajuster la taille du contenu
+-- Ajuster la taille
 for _, frame in ipairs(TabFrames) do
     frame.CanvasSize = UDim2.new(0, 0, 0, (#frame:GetChildren() - 1) * 45)
 end
 
 -- ============================================
--- DÉTECTION KEYBINDS GLOBALE
--- ============================================
-
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if not gameProcessed then
-        -- F8 pour toggle GUI
-        if input.KeyCode == Enum.KeyCode.F8 then
-            MainFrame.Visible = not MainFrame.Visible
-            ToggleBtn.Text = MainFrame.Visible and "F8 HIDE" or "F8 SHOW"
-        end
-        
-        -- Détection pour keybind selection
-        if KeybindListening then
-            KeybindListening(input, gameProcessed)
-        end
-    end
-end)
-
--- ============================================
--- AIMBOT CORRIGÉ AVEC KEYBINDS
+-- AIMBOT CORRIGÉ INGAME
 -- ============================================
 
 function GetClosestPlayerToAim()
@@ -648,11 +736,21 @@ function GetClosestPlayerToAim()
     
     for _, player in pairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character then
-            local head = player.Character:FindFirstChild("Head")
-            local hum = player.Character:FindFirstChild("Humanoid")
+            -- Team Check
+            if Cheat.Aim.TeamCheck and not IsEnemy(player) then
+                continue
+            end
             
-            if head and hum and hum.Health > 0 then
-                local pos, onScreen = Camera:WorldToViewportPoint(head.Position)
+            -- Alive Check
+            if Cheat.Aim.AliveCheck and not IsAlive(player) then
+                continue
+            end
+            
+            local targetPart = player.Character:FindFirstChild(Cheat.Aim.TargetPart)
+            local humanoid = player.Character:FindFirstChild("Humanoid")
+            
+            if targetPart and humanoid and humanoid.Health > 0 then
+                local pos, onScreen = Camera:WorldToViewportPoint(targetPart.Position)
                 if onScreen then
                     local dist = (Vector2.new(pos.X, pos.Y) - mousePos).Magnitude
                     if dist < minDist then
@@ -668,13 +766,25 @@ function GetClosestPlayerToAim()
 end
 
 function AimAtTarget()
-    if not Cheat.Aim.Enabled or not Cheat.Aim.HoldKey or not IsAiming then return end
+    if not Cheat.Aim.Enabled or not Cheat.Aim.HoldKey then return end
+    
+    -- Vérifie si la keybind est pressée
+    local keyPressed = false
+    if Cheat.Aim.HoldKey.EnumType == Enum.UserInputType then
+        -- Bouton souris
+        keyPressed = UserInputService:IsMouseButtonPressed(Cheat.Aim.HoldKey)
+    else
+        -- Touche clavier
+        keyPressed = UserInputService:IsKeyDown(Cheat.Aim.HoldKey)
+    end
+    
+    if not keyPressed then return end
     
     local target = GetClosestPlayerToAim()
     if not target or not target.Character then return end
     
-    local head = target.Character:FindFirstChild("Head")
-    if not head then return end
+    local targetPart = target.Character:FindFirstChild(Cheat.Aim.TargetPart)
+    if not targetPart then return end
     
     -- Silent Aim
     if Cheat.Aim.SilentAim and math.random(1, 100) <= Cheat.Aim.HitChance then
@@ -682,7 +792,7 @@ function AimAtTarget()
     end
     
     -- Magic Bullet
-    local aimPos = head.Position
+    local aimPos = targetPart.Position
     if Cheat.Aim.MagicBullet then
         aimPos = aimPos + Vector3.new(
             math.random(-Cheat.Aim.HitboxSize, Cheat.Aim.HitboxSize),
@@ -691,20 +801,41 @@ function AimAtTarget()
         )
     end
     
-    -- Smooth Aiming
+    -- Smooth Aiming INGAME
     local current = Camera.CFrame
     local targetCF = CFrame.lookAt(current.Position, aimPos)
-    Camera.CFrame = current:Lerp(targetCF, 1 - Cheat.Aim.Smooth)
+    
+    -- Calcul de la position cible
+    local delta = (aimPos - current.Position).Unit
+    local newLook = current.Position + delta * 100
+    
+    -- Smooth avec interpolation
+    local t = Cheat.Aim.Smooth
+    local newCFrame = CFrame.new(
+        current.Position,
+        current.Position:Lerp(newLook, t)
+    )
+    
+    Camera.CFrame = newCFrame
 end
 
 -- TriggerBot
 function TriggerBot()
-    if not Cheat.Aim.TriggerBot or not Cheat.Aim.HoldKey or not IsAiming then return end
+    if not Cheat.Aim.TriggerBot or not Cheat.Aim.HoldKey then return end
+    
+    local keyPressed = false
+    if Cheat.Aim.HoldKey.EnumType == Enum.UserInputType then
+        keyPressed = UserInputService:IsMouseButtonPressed(Cheat.Aim.HoldKey)
+    else
+        keyPressed = UserInputService:IsKeyDown(Cheat.Aim.HoldKey)
+    end
+    
+    if not keyPressed then return end
     
     local target = GetClosestPlayerToAim()
     if target and target.Character then
-        local hum = target.Character:FindFirstChild("Humanoid")
-        if hum and hum.Health > 0 then
+        local humanoid = target.Character:FindFirstChild("Humanoid")
+        if humanoid and humanoid.Health > 0 then
             mouse1press()
             task.wait(0.05)
             mouse1release()
@@ -773,11 +904,29 @@ function UpdateNoClip()
 end
 
 -- ============================================
+-- DÉTECTION KEYBINDS
+-- ============================================
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if not gameProcessed then
+        -- F8 pour toggle GUI
+        if input.KeyCode == Enum.KeyCode.F8 then
+            MainFrame.Visible = not MainFrame.Visible
+            ToggleBtn.Text = MainFrame.Visible and "F8 HIDE" or "F8 SHOW"
+        end
+        
+        -- Détection pour keybind selection
+        if KeybindListening then
+            KeybindListening(input, gameProcessed)
+        end
+    end
+end)
+
+-- ============================================
 -- BOUCLE PRINCIPALE
 -- ============================================
 
 RunService.RenderStepped:Connect(function()
-    UpdateAimKey()
     UpdateESP()
     UpdateFOVCircle()
     
@@ -792,9 +941,14 @@ RunService.RenderStepped:Connect(function()
 end)
 
 print("========================================")
-print("EVENT HORIZON - VERSION CORRIGÉE")
-print("F8 pour cacher/afficher le GUI")
-print("1. Sélectionne une keybind dans AIM tab")
-print("2. Active Aimbot")
-print("3. Utilise ta keybind pour viser")
+print("EVENT HORIZON v2.0 - CHARGÉ")
+print("F8 pour cacher/afficher")
+print("========================================")
+print("CORRECTIONS APPLIQUÉES:")
+print("1. Toggles inversés fixés (OFF par défaut)")
+print("2. Team Check & Alive Check ajoutés")
+print("3. Aimbot fonctionne ingame")
+print("4. Positions ESP corrigées")
+print("5. Keybids souris supportées")
+print("6. Target Part sélectionnable")
 print("========================================")
