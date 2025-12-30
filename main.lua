@@ -1,6 +1,6 @@
 -- ============================================
--- EVENT HORIZON - VERSION FINALE
--- Toutes features | Pas de bugs | GUI fonctionnel
+-- EVENT HORIZON - VERSION ULTIME
+-- CHAMS + Toutes features | GUI chargé directement
 -- ============================================
 
 -- Services
@@ -12,7 +12,7 @@ local Workspace = game:GetService("Workspace")
 local Camera = Workspace.CurrentCamera
 local RunService = game:GetService("RunService")
 
--- Variables OFF par défaut
+-- Variables (OFF par défaut)
 local Cheat = {
     -- VISUAL
     ESP = false,
@@ -20,14 +20,21 @@ local Cheat = {
     Tracers = false,
     ShowNames = false,
     ShowHealth = false,
+    ShowDistance = false,
     TeamCheck = true,
+    AliveCheck = true,
+    
+    -- CHAMS
+    Chams = false,
+    ChamsColor = Color3.fromRGB(255, 0, 255),
+    ChamsTransparency = 0.5,
     
     -- AIM
     Aimbot = false,
     AimKey = nil,
     AimKeyText = "NONE",
     TargetPart = "Head",
-    FOV = 100,
+    FOV = 120,
     ShowFOV = false,
     Smooth = 0.15,
     TriggerBot = false,
@@ -49,6 +56,7 @@ local Cheat = {
 
 -- États
 local ESPDrawings = {}
+local ChamsAdornments = {}
 local FOVCircle = Drawing.new("Circle")
 local FlyBodyVelocity
 local KeybindListening = nil
@@ -63,43 +71,85 @@ FOVCircle.Filled = false
 FOVCircle.Position = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
 
 -- ============================================
--- ESP FONCTIONNEL (60 FPS)
+-- ESP AVEC CHAMS
 -- ============================================
 
 function UpdateESP()
-    if not Cheat.ESP then 
-        for _, drawings in pairs(ESPDrawings) do
-            for _, drawing in pairs(drawings) do
-                drawing.Visible = false
+    -- Nettoyer les CHAMS si désactivés
+    if not Cheat.Chams then
+        for _, playerChams in pairs(ChamsAdornments) do
+            for _, cham in pairs(playerChams) do
+                cham:Destroy()
             end
         end
-        return 
+        ChamsAdornments = {}
     end
     
+    -- ESP Drawing
     for _, player in pairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character then
-            if Cheat.TeamCheck and LocalPlayer.Team and player.Team and LocalPlayer.Team == player.Team then
-                goto continue
-            end
-            
             local root = player.Character:FindFirstChild("HumanoidRootPart")
             local hum = player.Character:FindFirstChild("Humanoid")
             
-            if root and hum and hum.Health > 0 then
+            -- Team Check
+            if Cheat.TeamCheck then
+                if LocalPlayer.Team and player.Team and LocalPlayer.Team == player.Team then
+                    goto continue
+                end
+            end
+            
+            -- Alive Check
+            if Cheat.AliveCheck then
+                if not hum or hum.Health <= 0 then
+                    goto continue
+                end
+            end
+            
+            if root then
                 local pos, onScreen = Camera:WorldToViewportPoint(root.Position)
                 
-                if not ESPDrawings[player] then
-                    ESPDrawings[player] = {
-                        Box = Drawing.new("Square"),
-                        Tracer = Drawing.new("Line"),
-                        Name = Drawing.new("Text"),
-                        Health = Drawing.new("Text")
-                    }
+                -- CHAMS
+                if Cheat.Chams then
+                    if not ChamsAdornments[player] then
+                        ChamsAdornments[player] = {}
+                    end
+                    
+                    for _, part in pairs(player.Character:GetChildren()) do
+                        if part:IsA("BasePart") and part.Transparency < 1 then
+                            if not ChamsAdornments[player][part] then
+                                local cham = Instance.new("BoxHandleAdornment")
+                                cham.Name = "Cham"
+                                cham.Adornee = part
+                                cham.AlwaysOnTop = true
+                                cham.ZIndex = 5
+                                cham.Size = part.Size
+                                cham.Color3 = Cheat.ChamsColor
+                                cham.Transparency = Cheat.ChamsTransparency
+                                cham.Parent = part
+                                ChamsAdornments[player][part] = cham
+                            else
+                                ChamsAdornments[player][part].Visible = true
+                                ChamsAdornments[player][part].Color3 = Cheat.ChamsColor
+                                ChamsAdornments[player][part].Transparency = Cheat.ChamsTransparency
+                            end
+                        end
+                    end
                 end
                 
-                local esp = ESPDrawings[player]
-                
-                if onScreen then
+                -- ESP Drawing
+                if Cheat.ESP and onScreen and hum and hum.Health > 0 then
+                    if not ESPDrawings[player] then
+                        ESPDrawings[player] = {
+                            Box = Drawing.new("Square"),
+                            Tracer = Drawing.new("Line"),
+                            Name = Drawing.new("Text"),
+                            Health = Drawing.new("Text"),
+                            Distance = Drawing.new("Text")
+                        }
+                    end
+                    
+                    local esp = ESPDrawings[player]
+                    
                     local head = player.Character:FindFirstChild("Head")
                     local headPos = head and Camera:WorldToViewportPoint(head.Position) or pos
                     
@@ -150,17 +200,22 @@ function UpdateESP()
                         esp.Health.Size = 12
                         esp.Health.Center = true
                     end
-                else
-                    esp.Box.Visible = false
-                    esp.Tracer.Visible = false
-                    esp.Name.Visible = false
-                    esp.Health.Visible = false
+                    
+                    -- Distance
+                    esp.Distance.Visible = Cheat.ShowDistance
+                    if Cheat.ShowDistance then
+                        local dist = (root.Position - Camera.CFrame.Position).Magnitude
+                        esp.Distance.Color = Color3.fromRGB(200, 200, 200)
+                        esp.Distance.Text = math.floor(dist) .. " studs"
+                        esp.Distance.Position = Vector2.new(pos.X, pos.Y + height/2 + 25)
+                        esp.Distance.Size = 11
+                        esp.Distance.Center = true
+                    end
+                elseif ESPDrawings[player] then
+                    for _, drawing in pairs(ESPDrawings[player]) do
+                        drawing.Visible = false
+                    end
                 end
-            elseif ESPDrawings[player] then
-                esp.Box.Visible = false
-                esp.Tracer.Visible = false
-                esp.Name.Visible = false
-                esp.Health.Visible = false
             end
         end
         ::continue::
@@ -168,7 +223,7 @@ function UpdateESP()
 end
 
 -- ============================================
--- AIMBOT FONCTIONNEL
+-- AIMBOT
 -- ============================================
 
 function GetClosestPlayer()
@@ -180,8 +235,17 @@ function GetClosestPlayer()
     
     for _, player in pairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character then
-            if Cheat.TeamCheck and LocalPlayer.Team and player.Team and LocalPlayer.Team == player.Team then
-                goto continue2
+            if Cheat.TeamCheck then
+                if LocalPlayer.Team and player.Team and LocalPlayer.Team == player.Team then
+                    goto continue2
+                end
+            end
+            
+            if Cheat.AliveCheck then
+                local hum = player.Character:FindFirstChild("Humanoid")
+                if not hum or hum.Health <= 0 then
+                    goto continue2
+                end
             end
             
             local target = player.Character:FindFirstChild(Cheat.TargetPart)
@@ -256,7 +320,7 @@ function UpdateFOV()
 end
 
 -- ============================================
--- MOUVEMENT FONCTIONNEL
+-- MOUVEMENT
 -- ============================================
 
 function UpdateFly()
@@ -335,12 +399,12 @@ function UpdateNoClip()
 end
 
 -- ============================================
--- GUI FONCTIONNEL
+-- GUI (chargé directement)
 -- ============================================
 
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "EventHorizonGUI"
-ScreenGui.Parent = game:GetService("CoreGui") or LocalPlayer:WaitForChild("PlayerGui")
+ScreenGui.Parent = game:GetService("CoreGui")
 
 local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 350, 0, 400)
@@ -401,12 +465,19 @@ for i, tabName in ipairs(Tabs) do
     btn.TextSize = 13
     btn.Parent = MainFrame
     
-    local frame = Instance.new("Frame")
+    local frame = Instance.new("ScrollingFrame")
     frame.Size = UDim2.new(1, 0, 1, 0)
     frame.Position = UDim2.new(0, 0, 0, 0)
     frame.BackgroundTransparency = 1
+    frame.BorderSizePixel = 0
+    frame.ScrollBarThickness = 4
+    frame.ScrollBarImageColor3 = Color3.fromRGB(60, 60, 80)
     frame.Visible = i == 1
     frame.Parent = TabContainer
+    
+    local UIList = Instance.new("UIListLayout")
+    UIList.Padding = UDim.new(0, 8)
+    UIList.Parent = frame
     
     btn.MouseButton1Click:Connect(function()
         for j = 1, #Tabs do
@@ -420,7 +491,7 @@ for i, tabName in ipairs(Tabs) do
 end
 
 -- ============================================
--- UI FONCTIONS
+-- UI FUNCTIONS
 -- ============================================
 
 local function CreateToggle(parent, text, default, callback)
@@ -643,9 +714,24 @@ CreateToggle(VisualFrame, "Health", Cheat.ShowHealth, function()
     return Cheat.ShowHealth
 end)
 
+CreateToggle(VisualFrame, "Distance", Cheat.ShowDistance, function()
+    Cheat.ShowDistance = not Cheat.ShowDistance
+    return Cheat.ShowDistance
+end)
+
+CreateToggle(VisualFrame, "Chams", Cheat.Chams, function()
+    Cheat.Chams = not Cheat.Chams
+    return Cheat.Chams
+end)
+
 CreateToggle(VisualFrame, "Team Check", Cheat.TeamCheck, function()
     Cheat.TeamCheck = not Cheat.TeamCheck
     return Cheat.TeamCheck
+end)
+
+CreateToggle(VisualFrame, "Alive Check", Cheat.AliveCheck, function()
+    Cheat.AliveCheck = not Cheat.AliveCheck
+    return Cheat.AliveCheck
 end)
 
 -- AIM
@@ -743,7 +829,7 @@ CreateToggle(MoveFrame, "NoClip", Cheat.NoClip, function()
 end)
 
 -- ============================================
--- KEYBIND DETECTION
+-- DÉTECTION KEYBINDS
 -- ============================================
 
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
@@ -786,7 +872,7 @@ UserInputService.InputEnded:Connect(function(input)
 end)
 
 -- ============================================
--- MAIN LOOP
+-- BOUCLE PRINCIPALE
 -- ============================================
 
 RunService.RenderStepped:Connect(function()
@@ -807,11 +893,13 @@ print("========================================")
 print("EVENT HORIZON - CHARGÉ")
 print("GUI visible | F8 pour cacher/afficher")
 print("========================================")
-print("Toutes features fonctionnent:")
+print("TOUTES FEATURES:")
 print("1. ESP (2D/3D/Corner + Tracers)")
-print("2. Aimbot (MB1/MB2 keybinds)")
-print("3. Silent Aim + Trigger Bot")
-print("4. Magic Bullet + Hitbox Size")
-print("5. Fly + WalkSpeed + JumpPower")
-print("6. NoClip + BunnyHop")
+print("2. CHAMS (couleur + transparence)")
+print("3. Aimbot (MB1/MB2 + FOV + Smooth)")
+print("4. Silent Aim + Trigger Bot")
+print("5. Magic Bullet + Hitbox Size")
+print("6. Team Check + Alive Check")
+print("7. Fly + WalkSpeed + JumpPower")
+print("8. BunnyHop + NoClip")
 print("========================================")
